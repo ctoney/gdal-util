@@ -5,6 +5,8 @@
 #  Project:  GDAL Python Interface
 #  Purpose:  Application for converting raster data to a vector polygon layer.
 #  Author:   Frank Warmerdam, warmerdam@pobox.com
+#			 (Chris Toney - same as GDAL 1.9.0 version but adds -8 option for
+#			 enumerating polygons with diagonal connectedness (8CONNECT)
 # 
 #******************************************************************************
 #  Copyright (c) 2008, Frank Warmerdam
