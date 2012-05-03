@@ -4,6 +4,9 @@
  * Project:  GDAL
  * Purpose:  Raster Polygon Enumerator
  * Author:   Frank Warmerdam, warmerdam@pobox.com
+ *			Chris Toney - lines 188-246 contain fixed code for correctly
+ *			enumerating polygons with diagonally connected pixels (8CONNECT) -
+ *			see ticket 4647 at http://trac.osgeo.org/gdal
  *
  ******************************************************************************
  * Copyright (c) 2008, Frank Warmerdam
