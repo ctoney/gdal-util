@@ -41,7 +41,7 @@ import os.path
 def Usage():
     print("""
 gdal_polygonize [-8] [-nomask] [-mask filename] raster_file [-b band]
-                [-q] [-f ogr_format] out_file [layer] [fieldname]
+                [-value n] [-q] [-f ogr_format] out_file [layer] [fieldname]
 """)
     sys.exit(1)
 
@@ -92,6 +92,10 @@ while i < len(argv):
     elif arg == '-b':
         i = i + 1
         src_band_n = int(argv[i])
+
+    elif arg == '-value':
+		i = i + 1
+		options.append('SINGLE_VAL=' + argv[i])
 
     elif src_filename is None:
         src_filename = argv[i]
@@ -206,7 +210,7 @@ if quiet_flag:
     prog_func = None
 else:
     prog_func = gdal.TermProgress
-    
+
 result = gdal.Polygonize( srcband, maskband, dst_layer, dst_field, options,
                           callback = prog_func )
 
