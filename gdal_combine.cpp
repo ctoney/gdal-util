@@ -409,15 +409,16 @@ int main(int argc, char ** argv) {
 			pfnProgress(nYoff / (nYSize-1.0), NULL, pProgressData);
 	}
 	
-	if(pszOutRaster != NULL && !bQuiet)
+	if(pszOutRaster != NULL && !bQuiet) {
 		printf("\nRaster output written to: %s\n", pszOutRaster);
 
-	//warn if the combination ID exceeded the range of eOutDataType
-	if(nCmbID >= (1<<GDALGetDataTypeSize(eOutDataType))) {
-		printf( "\nWARNING: The number of unique combinations (%u) exceeded "
-				"the upper limit (%u) of the output data type. The output "
-				"raster contains invalid data.\n\n", 
-				nCmbID, (1<<GDALGetDataTypeSize(eOutDataType))-1 );
+		//warn if the combination ID exceeded the range of eOutDataType
+		if(nCmbID >= (1<<GDALGetDataTypeSize(eOutDataType))) {
+			printf( "\nWARNING: The number of unique combinations (%u) exceeded "
+					"the upper limit (%u) of the output data type. The output "
+					"raster contains invalid data.\n\n", 
+					nCmbID, (1<<GDALGetDataTypeSize(eOutDataType))-1 );
+		}
 	}
 
 	/* write the output CSV file */
