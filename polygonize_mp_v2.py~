@@ -1,0 +1,125 @@
+# polygonize_mp.py - multiprocess polygonize
+# Chris Toney, christoney@fs.fed.us
+
+# v1, 2016-03-06
+# v2, 2016-03-16
+#	- call the gdal_polygonize api internally, rather than external py file
+
+from osgeo import gdal
+from osgeo.gdalconst import *
+from osgeo import osr
+import os
+import sys
+import subprocess
+import multiprocessing
+import shlex
+
+# BEGIN CONFIG
+src_file = "/nobackup/nadf3/attribution/data/national/outputs/mosaic_test/annual_us_mosaic_combine_mmu2_2008_recode.img"
+out_dir = "/nobackup/nadf3/attribution/data/national/outputs/mosaic_test/"
+out_file_base_name = "annual_vct_2008_recode"
+out_fmt = "VRT"
+out_file_ext = ".vrt"
+nslices = 20
+ncpus = 12
+# END CONFIG
+
+# open raster file and get size
+ds = gdal.Open(src_file)
+xsize = ds.RasterXSize
+ysize = ds.RasterYSize
+ds = None
+
+# even-sized slices
+xsizes = [int(xsize/nslices)] * nslices
+for i in range(xsize % nslices):
+    xsizes[i] += 1
+
+# create the raster slices
+e = 0
+slice_files = []
+for i in range(nslices):
+	this_slice_file = out_file_base_name + "_slice" + str(i+1) + out_file_ext
+	this_slice_file = os.path.join(out_dir, this_slice_file)
+	slice_files.append(this_slice_file)
+	
+	arglist = ['gdal_translate']
+	arglist.append('-of')
+	arglist.append(out_fmt)
+	arglist.append('-srcwin')
+	# xoff
+	arglist.append(str(sum(xsizes[0:i])))
+	# yoff
+	arglist.append('0')
+	# xsize
+	arglist.append(str(xsizes[i]))
+	# ysize
+	arglist.append(str(ysize))
+	arglist.append(src_file)
+	arglist.append(this_slice_file)
+
+	ret = subprocess.call(arglist)
+	if (ret != 0):
+		e += 1
+		print("ERROR: gdal_translate returned " + str(ret))
+
+if (e == 0):
+	print("Raster slices written to " + out_dir)
+else:
+	print("Stopping... gdal_translate returned errors.")
+	sys.exit(1)
+
+
+def gdal_polygonize(raster_file):
+	# This runs in a separate process.
+	src_ds = gdal.Open(raster_file)
+	if src_ds is None:
+		#print('Unable to open %s' % raster_file)
+		return(1)
+	srcband = src_ds.GetRasterBand(1)
+
+	drv = ogr.GetDriverByName('ESRI Shapefile')
+	dst_ds = drv.CreateDataSource(raster_file.replace(out_file_ext, '.shp'))
+
+	srs = None
+	if src_ds.GetProjectionRef() != '':
+		srs = osr.SpatialReference()
+		srs.ImportFromWkt(src_ds.GetProjectionRef())
+
+	dst_layername = os.path.basename(raster_file).replace(out_file_ext, '')		
+	dst_layer = dst_ds.CreateLayer(dst_layername, srs = srs)
+	dst_fieldname = 'DN'
+	fd = ogr.FieldDefn(dst_fieldname, ogr.OFTInteger)
+	dst_layer.CreateField(fd)
+	dst_field = 0
+
+	maskband = None
+	
+	prog_func = None
+	#prog_func = gdal.TermProgress
+
+	options = []
+	options.append('8CONNECTED=8')
+
+	result = gdal.Polygonize(srcband, maskband, dst_layer, dst_field, options,
+		                      callback = prog_func )
+
+	srcband = None
+	src_ds = None
+	fd = None
+	dst_layer = None
+	dst_ds = None
+
+	return(result)
+
+
+# polygonize in parallel using ncpus
+print("Polygonizing slices...")
+pool = multiprocessing.Pool(ncpus)
+results = pool.map_async(gdal_polygonize, slice_files)
+pool.close()
+pool.join()
+print(results)
+
+print("Done.")
+
